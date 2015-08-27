@@ -8,12 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gliderlabs/logspout/router"
 )
 
 const (
-	adapterName         = "loggly"
+	adapterName         = "r5-loggly"
 	logglyTokenEnvVar   = "LOGGLY_TOKEN"
 	logglyAddr          = "https://logs-01.loggly.com"
 	logglyEventEndpoint = "/inputs"
@@ -25,7 +26,7 @@ func init() {
 	router.AdapterFactories.Register(NewLogglyAdapter, adapterName)
 
 	r := &router.Route{
-		Adapter: "loggly",
+		Adapter: adapterName,
 	}
 
 	// It's not documented in the logspout repo but if you want to use an adapter without
@@ -61,12 +62,20 @@ type Adapter struct {
 // Stream satisfies the router.LogAdapter interface and passes all messages to Loggly
 func (l *Adapter) Stream(logstream chan *router.Message) {
 	for m := range logstream {
+		envMap := make(map[string]string)
+
+		for _, e := range m.Container.Config.Env {
+			pair := strings.SplitN(e, "=", 2)
+			envMap[pair[0]] = pair[1]
+		}
+
 		msg := logglyMessage{
-			Message:           m.Data,
-			ContainerName:     m.Container.Name,
-			ContainerID:       m.Container.ID,
-			ContainerImage:    m.Container.Config.Image,
-			ContainerHostname: m.Container.Config.Hostname,
+			Message:        m.Data,
+			ContainerID:    m.Container.ID,
+			ContainerImage: m.Container.Config.Image,
+			InstanceID:     os.Getenv("INSTANCE_ID"),
+			ServiceName:    envMap["SERVICE_NAME"],
+			AppRevision:    envMap["APP_REVISION"],
 		}
 
 		err := l.SendMessage(msg)
@@ -110,9 +119,10 @@ func (l *Adapter) SendMessage(msg logglyMessage) error {
 }
 
 type logglyMessage struct {
-	Message           string `json:"message"`
-	ContainerName     string `json:"container_name"`
-	ContainerID       string `json:"container_id"`
-	ContainerImage    string `json:"container_image"`
-	ContainerHostname string `json:"hostname"`
+	Message        string `json:"message"`
+	ContainerID    string `json:"container_id"`
+	ContainerImage string `json:"container_image"`
+	InstanceID     string `json:"instance_id,omitempty"`
+	ServiceName    string `json:"service_name,omitempty"`
+	AppRevision    string `json:"app_revision,omitempty"`
 }
