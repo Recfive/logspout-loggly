@@ -69,10 +69,6 @@ func (l *Adapter) Stream(logstream chan *router.Message) {
 			envMap[pair[0]] = pair[1]
 		}
 
-		if envMap["SERVICE_NAME"] == "accounts" {
-			fmt.Println(m.Data)
-		}
-
 		msg := logglyMessage{
 			Message:        m.Data,
 			ContainerID:    m.Container.ID,
