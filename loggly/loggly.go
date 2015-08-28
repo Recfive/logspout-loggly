@@ -98,8 +98,6 @@ func (l *Adapter) SendMessage(msg logglyMessage) error {
 	url := fmt.Sprintf("%s%s/%s", logglyAddr, logglyEventEndpoint, l.token)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(js))
 
-	fmt.Printf("Sending %s\n", js)
-
 	if err != nil {
 		return err
 	}
@@ -116,9 +114,6 @@ func (l *Adapter) SendMessage(msg logglyMessage) error {
 		errMsg := fmt.Sprintf("Received a non 200 status code: %s", err.Error())
 		return errors.New(errMsg)
 	}
-
-	fmt.Printf("Status: %s\n", resp.StatusCode)
-	fmt.Printf("Body: %s\n", resp.Body)
 
 	return nil
 }
